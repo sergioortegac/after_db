@@ -1,4 +1,4 @@
-package main
+package after_db
 
 import (
 	"encoding/json"
