@@ -55,10 +55,10 @@ func (c *Client) Insert(key string, value interface{}) (int, error) {
 }
 
 // Método que busca un valor en el servicio, dado una clave
-func (c *Client) Search(key string) (interface{}, int, error) {
+func (c *Client) SearchByKey(key string) (interface{}, int, error) {
 	// Crear un mensaje con la operación y la clave
 	msg := map[string]interface{}{
-		"op":  "search",
+		"op":  "search_by_key",
 		"key": key,
 	}
 	// Codificar el mensaje en formato JSON y escribirlo en la conexión
@@ -84,7 +84,36 @@ func (c *Client) Search(key string) (interface{}, int, error) {
 	return value, int(code), nil
 }
 
-// Método que actualiza un valor en el servicio, dado una clave y un valor
+func (c *Client) SearchByValue(value string) (interface{}, int, error) {
+	// Crear un mensaje con la operación y la clave
+	msg := map[string]interface{}{
+		"op":    "search_by_value",
+		"value": value,
+	}
+	// Codificar el mensaje en formato JSON y escribirlo en la conexión
+	err := c.enc.Encode(msg)
+	if err != nil {
+		return nil, 0, err
+	}
+	// Leer una respuesta del servicio
+	var resp map[string]interface{}
+	err = c.dec.Decode(&resp)
+	if err != nil {
+		return nil, 0, err
+	}
+	// Obtener el código y el valor de la respuesta
+	code, ok := resp["code"].(float64)
+	if !ok {
+		return nil, 0, fmt.Errorf("Código inválido")
+	}
+	key, ok := resp["key"]
+	if !ok {
+		return nil, int(code), nil
+	}
+	return key, int(code), nil
+}
+
+// Método que actualiza un valor en el servicio, dado una clave y un valor -- No utilizada por ahora
 func (c *Client) Update(key string, value interface{}) (int, error) {
 	// Crear un mensaje con la operación, la clave y el valor
 	msg := map[string]interface{}{
