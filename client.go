@@ -1,9 +1,12 @@
 package after_db
 
 import (
-	"fmt"
+	"errors"
 	"net"
+	"sync"
 )
+
+var connections sync.Map
 
 type Client struct {
 	conn net.Conn
@@ -22,40 +25,36 @@ func (c *Client) Close() {
 	c.conn.Close()
 }
 
-func (c *Client) Get(key string) (string, error) {
-	command := fmt.Sprintf("GET %s", key)
-	_, err := c.conn.Write([]byte(command + "\n"))
-	if err != nil {
-		return "", err
+func (c *Client) GetByKey(key string, value any) (any, error) {
+	value, found := connections.Load(key)
+	if found {
+		return value, errors.New("error")
 	}
+	return nil, errors.New("key not found")
+}
 
-	// Leer la respuesta del servidor
-	response := make([]byte, 512)
-	n, err := c.conn.Read(response)
-	if err != nil {
-		return "", err
+func (c *Client) GetKeyByValue(valueToFind any) (any, error) {
+	var keyValue any
+
+	connections.Range(func(key, value any) bool {
+		if value == valueToFind {
+			keyValue = key
+		}
+		return true
+	})
+
+	if keyValue != nil {
+		return keyValue, nil
 	}
-
-	return string(response[:n]), nil
+	return nil, errors.New("value not found finding by value")
 }
 
 func (c *Client) Save(key, value string) error {
-	command := fmt.Sprintf("SAVE %s %s", key, value)
-	_, err := c.conn.Write([]byte(command + "\n"))
-	if err != nil {
-		return err
-	}
+	connections.Store(key, value)
+	return nil
+}
 
-	// Leer la respuesta del servidor
-	response := make([]byte, 512)
-	n, err := c.conn.Read(response)
-	if err != nil {
-		return err
-	}
-
-	if string(response[:n]) != "SAVE exitoso\n" {
-		return fmt.Errorf("Error en SAVE: %s", string(response[:n]))
-	}
-
+func (c *Client) Delete(key string) error {
+	connections.Delete(key)
 	return nil
 }
